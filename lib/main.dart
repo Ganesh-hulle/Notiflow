@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'auth/bloc/auth_bloc.dart';
 import 'notifications/bloc/notification_bloc.dart';
 import 'notifications/repository/notification_repository.dart';
@@ -8,7 +9,9 @@ import 'auth/screens/login_screen.dart';
 import 'auth/screens/profile_setup_screen.dart';
 import 'main_wrapper.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const NotiFlowApp());
 }
 

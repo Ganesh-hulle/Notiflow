@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "866006552998",
+    "project_id": "notiflow-1b4db",
+    "storage_bucket": "notiflow-1b4db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866006552998:android:9a583c2bad52f455e83f67",
+        "android_client_info": {
+          "package_name": "com.example.notiflow"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866006552998-vg9a4vd292hf668a1t34r6hnr39lsbst.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.notiflow",
+            "certificate_hash": "3c7690eb274ad4cadd7e62496395e41478066c6c"
+          }
+        },
+        {
+          "client_id": "866006552998-rk89tp7b3of1eemon3j315egod31rucl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKQFQGqrGYdFLCC6KWeZaUYMMFDwQTcbw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866006552998-rk89tp7b3of1eemon3j315egod31rucl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

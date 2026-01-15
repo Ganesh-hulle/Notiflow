@@ -5,38 +5,7 @@ import '../bloc/auth_bloc.dart';
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
-  void _showMockGoogleDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Choose an account'),
-        children: [
-          _buildEmailOption(ctx, 'director@college.edu'),
-          _buildEmailOption(ctx, 'hod.cs@college.edu'),
-          _buildEmailOption(ctx, 'prof.smith@college.edu'),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildEmailOption(BuildContext context, String email) {
-    return SimpleDialogOption(
-      onPressed: () {
-        context.read<AuthBloc>().add(LoginRequested(email));
-        Navigator.pop(context);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Row(
-          children: [
-            const CircleAvatar(child: Icon(Icons.person)),
-            const SizedBox(width: 12),
-            Text(email),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +22,9 @@ class LoginScreen extends StatelessWidget {
             ),
             const SizedBox(height: 48),
             ElevatedButton.icon(
-              onPressed: () => _showMockGoogleDialog(context),
+              onPressed: () {
+                context.read<AuthBloc>().add(const LoginRequested());
+              },
               icon: const Icon(Icons.login),
               label: const Text('Sign in with Google'),
               style: ElevatedButton.styleFrom(

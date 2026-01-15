@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../models/user_model.dart';
+import '../../services/auth_service.dart';
 
 
 part 'auth_event.dart';
@@ -13,11 +14,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogoutRequested);
   }
 
-  void _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) {
-    // Determine if user exists or needs setup. 
-    // For this Mock phase, ALWAYS go to Profile Setup if not logged in.
-    // In future, check Firebase.
-    emit(AuthState.profileSetup(event.email));
+  Future<void> _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
+    try {
+      final (user, isNew) = await AuthService.signInWithGoogle();
+      if (user != null && user.email != null) {
+        // For now, redirect to profile setup with the email from Google
+        // In the future, check Firestore if user exists and is fully set up
+        emit(AuthState.profileSetup(user.email!));
+      }
+    } catch (e) {
+      // Handle error (maybe emit error state in future)
+      print("Login failed: $e");
+    }
   }
 
   void _onProfileSubmitted(ProfileSubmitted event, Emitter<AuthState> emit) {

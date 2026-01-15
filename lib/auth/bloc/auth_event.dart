@@ -8,11 +8,10 @@ abstract class AuthEvent extends Equatable {
 }
 
 class LoginRequested extends AuthEvent {
-  final String email;
-  const LoginRequested(this.email);
+  const LoginRequested();
 
   @override
-  List<Object> get props => [email];
+  List<Object> get props => [];
 }
 
 class ProfileSubmitted extends AuthEvent {
