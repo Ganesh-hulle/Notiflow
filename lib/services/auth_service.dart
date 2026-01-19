@@ -20,7 +20,11 @@ class AuthService {
         final isNew = userCred.additionalUserInfo?.isNewUser ?? false;
         return (userCred.user, isNew);
       } else {
-        final GoogleSignIn googleSignIn = GoogleSignIn();
+        // Use the Web client ID from google-services.json (client_type: 3)
+        // This is required for Android to show the proper account picker
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          serverClientId: '866006552998-rk89tp7b3of1eemon3j315egod31rucl.apps.googleusercontent.com',
+        );
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
         if (googleUser == null) {
