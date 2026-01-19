@@ -1,70 +1,119 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
+/// Centralized auth utilities for Google + Firebase.
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Initialize Google Sign-In (mostly for web/maintenance of scopes if needed)
-  static Future<void> initializeGoogle() async {
-    // Basic initialization if needed, though usually handled by the plugin automatically
+  /// Call once at app startup (e.g., before runApp).
+  ///
+  /// - `clientId`: Use on iOS/macOS, or if you have a specific client ID.
+  /// - `serverClientId`: Needed only if you want a server auth code on Android.
+  /// - `hostedDomain`: Restrict accounts to a domain (e.g., "example.com").
+  static Future<void> initializeGoogle({
+    String? clientId,
+    String? serverClientId,
+    String? hostedDomain,
+    String? nonce,
+  }) async {
+    // Initialize the singleton with optional parameters.
+    await GoogleSignIn.instance.initialize(
+      clientId: clientId,
+      serverClientId: serverClientId,
+      hostedDomain: hostedDomain,
+      nonce: nonce,
+    );
+    // NOTE: We intentionally avoid auto-attempting Google auth here.
+    // Root cause of the phantom "Signing you in" sheet was this init hook
+    // kicking off a background flow before the user tapped anything.
+    // (Comment kept for future audits of startup auth UX.)
   }
 
   /// Sign in with Google and Firebase.
+  ///
   /// Returns a tuple of (User?, isNewUser).
   static Future<(User?, bool)> signInWithGoogle() async {
+    if (kIsWeb) {
+      // On web, use Firebase's popup flow with a Google provider.
+      final provider = GoogleAuthProvider();
+      final userCred = await _auth.signInWithPopup(provider);
+      final isNew = userCred.additionalUserInfo?.isNewUser ?? false;
+      return (userCred.user, isNew);
+    }
+
+    // On Android/iOS/macOS, run the interactive Google flow.
+    final account = await GoogleSignIn.instance.authenticate();
+
+    // Fetch tokens. In v7+, GoogleSignInAuthentication exposes idToken only.
+    final googleAuth = account.authentication;
+    final idToken = googleAuth.idToken;
+
+    if (idToken == null) {
+      throw StateError('Google Sign-In returned a null idToken.');
+    }
+
+    // Build Firebase credential from Google idToken.
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
+
+    // Sign in to Firebase.
+    final userCred = await _auth.signInWithCredential(credential);
+    final isNew = userCred.additionalUserInfo?.isNewUser ?? false;
+    return (userCred.user, isNew);
+  }
+
+  /// Silent Google sign-in without UI; returns Firebase [User] if possible.
+  static Future<User?> trySilentGoogleSignIn() async {
+    if (kIsWeb) return null;
     try {
-      if (kIsWeb) {
-        final provider = GoogleAuthProvider();
-        final userCred = await _auth.signInWithPopup(provider);
-        final isNew = userCred.additionalUserInfo?.isNewUser ?? false;
-        return (userCred.user, isNew);
-      } else {
-        // Use the Web client ID from google-services.json (client_type: 3)
-        // This is required for Android to show the proper account picker
-        final GoogleSignIn googleSignIn = GoogleSignIn(
-          serverClientId: '866006552998-rk89tp7b3of1eemon3j315egod31rucl.apps.googleusercontent.com',
-        );
-        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      // Lightweight = no blocking UI; if the platform shows UI, it is minimal.
+      final maybeFuture = GoogleSignIn.instance
+          .attemptLightweightAuthentication();
+      final account = maybeFuture == null ? null : await maybeFuture;
+      if (account == null) return null;
 
-        if (googleUser == null) {
-          // User canceled the sign-in flow
-          return (null, false);
-        }
+      final googleAuth = await account.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null) return null;
 
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        final UserCredential userCredential =
-            await _auth.signInWithCredential(credential);
-        
-        final isNew = userCredential.additionalUserInfo?.isNewUser ?? false;
-
-        return (userCredential.user, isNew);
-      }
-    } catch (e) {
-      print('Error signing in with Google: $e');
-      rethrow;
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      final userCred = await _auth.signInWithCredential(credential);
+      return userCred.user;
+    } catch (e, stack) {
+      print('Silent Google sign-in failed: $e');
+      // Ignore failures; caller will treat as unauthenticated.
+      return null;
     }
   }
 
-  /// Sign out
+  /// Firebase auth state stream (useful for gates/navigation).
+  static Stream<User?> authStateChanges() => _auth.authStateChanges();
+
+  /// Sign out from both Google and Firebase.
   static Future<void> signOut() async {
-    try {
-      if (!kIsWeb) {
-        await GoogleSignIn().signOut();
+    // Best-effort Google sign out (non-web).
+    if (!kIsWeb) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e, stack) {
+        print('Google sign-out failed: $e');
+        // ignore; still sign out from Firebase below
       }
-      await _auth.signOut();
-    } catch (e) {
-      print('Error signing out: $e');
     }
+    await _auth.signOut();
   }
 
-  // Auth state stream
-  static Stream<User?> get authStateChanges => _auth.authStateChanges();
+  /// Fully disconnect (revokes authorization). Optional.
+  static Future<void> disconnect() async {
+    if (!kIsWeb) {
+      try {
+        await GoogleSignIn.instance.disconnect();
+      } catch (e, stack) {
+        print('Google disconnect failed: $e');
+        // ignore
+      }
+    }
+    await _auth.signOut();
+  }
 }
