@@ -8,10 +8,18 @@ import 'notifications/repository/notification_repository.dart';
 import 'auth/screens/login_screen.dart';
 import 'auth/screens/profile_setup_screen.dart';
 import 'main_wrapper.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Initialize Google Sign-In with the Web Client ID from google-services.json
+  await AuthService.initializeGoogle(
+    serverClientId:
+        '866006552998-rk89tp7b3of1eemon3j315egod31rucl.apps.googleusercontent.com',
+  );
+
   runApp(const NotiFlowApp());
 }
 
@@ -22,9 +30,7 @@ class NotiFlowApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Repository Providers
     return MultiRepositoryProvider(
-      providers: [
-        RepositoryProvider(create: (_) => NotificationRepository()),
-      ],
+      providers: [RepositoryProvider(create: (_) => NotificationRepository())],
       child: MultiBlocProvider(
         providers: [
           BlocProvider(create: (_) => AuthBloc()),
