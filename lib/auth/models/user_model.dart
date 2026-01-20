@@ -30,6 +30,30 @@ class AppUser extends Equatable {
     );
   }
 
+  /// Create AppUser from Firestore document
+  factory AppUser.fromJson(Map<String, dynamic> json, String id) {
+    return AppUser(
+      id: id,
+      email: json['email'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      role: UserRole.values.firstWhere(
+        (r) => r.name == json['role'],
+        orElse: () => UserRole.employee,
+      ),
+      colorValue: json['colorValue'] as int? ?? 0xFF2196F3,
+    );
+  }
+
+  /// Convert to Firestore document
+  Map<String, dynamic> toJson() {
+    return {
+      'email': email,
+      'name': name,
+      'role': role.name,
+      'colorValue': colorValue,
+    };
+  }
+
   AppUser copyWith({
     String? id,
     String? email,

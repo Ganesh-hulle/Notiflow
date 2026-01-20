@@ -1,26 +1,41 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../models/user_model.dart';
+import '../repository/user_repository.dart';
 import '../../services/auth_service.dart';
-
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc() : super(const AuthState.initial()) {
+  final UserRepository _userRepository;
+
+  AuthBloc({UserRepository? userRepository})
+    : _userRepository = userRepository ?? UserRepository(),
+      super(const AuthState.initial()) {
     on<LoginRequested>(_onLoginRequested);
     on<ProfileSubmitted>(_onProfileSubmitted);
     on<LogoutRequested>(_onLogoutRequested);
   }
 
-  Future<void> _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLoginRequested(
+    LoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     try {
       final (user, isNew) = await AuthService.signInWithGoogle();
       if (user != null && user.email != null) {
-        // For now, redirect to profile setup with the email from Google
-        // In the future, check Firestore if user exists and is fully set up
-        emit(AuthState.profileSetup(user.email!));
+        // Check if user already exists in Firestore
+        final existingUser = await _userRepository.getUser(user.uid);
+
+        if (existingUser != null) {
+          // Returning user - skip profile setup
+          emit(AuthState.authenticated(existingUser));
+        } else {
+          // New user - show profile setup
+          // Store the Firebase Auth UID for later use when saving
+          emit(AuthState.profileSetup(user.email!, firebaseUid: user.uid));
+        }
       }
     } catch (e) {
       // Handle error (maybe emit error state in future)
@@ -28,27 +43,36 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  void _onProfileSubmitted(ProfileSubmitted event, Emitter<AuthState> emit) {
-    if (state.pendingEmail == null) return;
+  Future<void> _onProfileSubmitted(
+    ProfileSubmitted event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state.pendingEmail == null || state.firebaseUid == null) return;
 
     final newUser = AppUser(
-      id: const Uuid().v4(), // Need to add uuid package or just random string
+      id: state.firebaseUid!, // Use Firebase Auth UID as document ID
       email: state.pendingEmail!,
       name: event.name,
       role: event.role,
       colorValue: event.colorValue,
     );
-    
-    emit(AuthState.authenticated(newUser));
+
+    // Save to Firestore
+    try {
+      await _userRepository.saveUser(newUser);
+      emit(AuthState.authenticated(newUser));
+    } catch (e) {
+      print("Failed to save user profile: $e");
+      // Still authenticate locally even if Firestore save fails
+      emit(AuthState.authenticated(newUser));
+    }
   }
 
-  void _onLogoutRequested(LogoutRequested event, Emitter<AuthState> emit) {
+  Future<void> _onLogoutRequested(
+    LogoutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    await AuthService.signOut();
     emit(const AuthState.initial());
   }
-}
-
-// Mock Uuid for now to avoid dependency add if not present
-class Uuid {
-  const Uuid();
-  String v4() => DateTime.now().millisecondsSinceEpoch.toString();
 }
