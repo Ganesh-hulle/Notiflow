@@ -29,4 +29,14 @@ class ProfileSubmitted extends AuthEvent {
   List<Object> get props => [name, role, colorValue];
 }
 
+/// Event to update user's display name
+class UpdateName extends AuthEvent {
+  final String newName;
+
+  const UpdateName(this.newName);
+
+  @override
+  List<Object> get props => [newName];
+}
+
 class LogoutRequested extends AuthEvent {}

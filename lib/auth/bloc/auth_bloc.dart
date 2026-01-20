@@ -15,6 +15,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       super(const AuthState.initial()) {
     on<LoginRequested>(_onLoginRequested);
     on<ProfileSubmitted>(_onProfileSubmitted);
+    on<UpdateName>(_onUpdateName);
     on<LogoutRequested>(_onLogoutRequested);
   }
 
@@ -65,6 +66,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       print("Failed to save user profile: $e");
       // Still authenticate locally even if Firestore save fails
       emit(AuthState.authenticated(newUser));
+    }
+  }
+
+  Future<void> _onUpdateName(UpdateName event, Emitter<AuthState> emit) async {
+    if (state.status != AuthStatus.authenticated) return;
+
+    final updatedUser = state.user.copyWith(name: event.newName);
+
+    // Update in Firestore
+    try {
+      await _userRepository.saveUser(updatedUser);
+      emit(AuthState.authenticated(updatedUser));
+    } catch (e) {
+      print("Failed to update name: $e");
+      // Still update locally
+      emit(AuthState.authenticated(updatedUser));
     }
   }
 
