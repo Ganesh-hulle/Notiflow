@@ -22,13 +22,8 @@ class _MainWrapperState extends State<MainWrapper> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_getTitle(_currentIndex)),
-      ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      appBar: AppBar(title: Text(_getTitle(_currentIndex))),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
